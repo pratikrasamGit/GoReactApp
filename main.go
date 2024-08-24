@@ -7,7 +7,7 @@ import (
 	"os"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/cors"
+	// "github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -26,9 +26,12 @@ var collection *mongo.Collection
 func main() {
 	fmt.Println("server running...")
 
-	err := godotenv.Load(".env")
-	if err != nil {
-		log.Fatal("Error loading env file")
+	if os.Getenv("ENV") != "production" {
+
+		err := godotenv.Load(".env")
+		if err != nil {
+			log.Fatal("Error loading env file")
+		}
 	}
 
 	PORT := os.Getenv("PORT")
@@ -54,15 +57,19 @@ func main() {
 
 	app := fiber.New()
 
-	app.Use(cors.New(cors.Config{
-		AllowOrigins: "http://127.0.0.1:5173/",
-		AllowHeaders: "Origin,Content-Type,Accept",
-	}))
+	// app.Use(cors.New(cors.Config{
+	// 	AllowOrigins: "http://127.0.0.1:5173/",
+	// 	AllowHeaders: "Origin,Content-Type,Accept",
+	// }))
 
 	app.Get("/api/todos", getTodos)
 	app.Post("/api/todos", createTodo)
-	app.Patch("/api/todos/:id", updateTodo) 
-	app.Delete("/api/todos/:id",deleteTodo)
+	app.Patch("/api/todos/:id", updateTodo)
+	app.Delete("/api/todos/:id", deleteTodo)
+
+	if os.Getenv("ENV") == "production" {
+		app.Static("/", "./client/dist")
+	}
 
 	log.Fatal(app.Listen("0.0.0.0:" + PORT))
 }
@@ -120,13 +127,13 @@ func updateTodo(c *fiber.Ctx) error {
 
 	filter := bson.M{"_id": objectId}
 	update := bson.M{"$set": bson.M{"completed": true}}
-	
+
 	_, err = collection.UpdateOne(context.Background(), filter, update)
 	if err != nil {
 		return err
 	}
 
-	return c.Status(200).JSON(fiber.Map{"success":true})
+	return c.Status(200).JSON(fiber.Map{"success": true})
 
 }
 
@@ -139,10 +146,10 @@ func deleteTodo(c *fiber.Ctx) error {
 	}
 
 	filter := bson.M{"_id": objectId}
-	_, err = collection.DeleteOne(context.Background(),filter)
+	_, err = collection.DeleteOne(context.Background(), filter)
 	if err != nil {
 		return err
 	}
 
-	return c.Status(200).JSON(fiber.Map{"success":true})
+	return c.Status(200).JSON(fiber.Map{"success": true})
 }
